@@ -1,0 +1,11 @@
+# Arquivos sensíveis
+token.json
+credentials.json
+
+# Cache do Python
+pycache/
+*.pyc
+
+# Arquivos de ambiente
+.env
+venv
