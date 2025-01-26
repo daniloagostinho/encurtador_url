@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Configuração do banco de dados
-DATABASE_URL = "postgresql://encurtador_user:password@localhost:5432/encurtador"
+DATABASE_URL = "postgresql://encurtador_user:password@db:5432/encurtador"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
