@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, HttpUrl
 import shortuuid
 from fastapi.responses import RedirectResponse
@@ -28,12 +28,21 @@ def get_db():
         db.close()
 
 @app.post("/encurtar", response_model=URLResponse)
-def encurtar_url(request: URLRequest, db: Session = Depends(get_db)):
+def encurtar_url(request: URLRequest, req: Request, db: Session = Depends(get_db)):
+    # Gerar um código único curto
     short_code = shortuuid.ShortUUID().random(length=6)
+
+    # Salvar no banco de dados
     new_url = URL(short_code=short_code, original_url=str(request.url))
     db.add(new_url)
     db.commit()
-    return {"short_url": f"http://127.0.0.1:8000/{short_code}"}
+
+    # Construir a URL encurtada dinamicamente
+    host = req.base_url.hostname  # Obtém o host dinamicamente
+    port = req.base_url.port      # Obtém a porta dinamicamente
+    full_url = f"http://{host}:{port}/{short_code}"
+
+    return {"short_url": full_url}
 
 @app.get("/{short_code}")
 def redirecionar_url(short_code: str, db: Session = Depends(get_db)):
