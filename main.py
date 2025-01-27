@@ -1,19 +1,20 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, HttpUrl
 import shortuuid
 from fastapi.responses import RedirectResponse
-
 from fastapi import Depends
 from sqlalchemy.orm import Session
-
 from database import SessionLocal, init_db, URL
-
 from cache import redis_client
-
 import os
 from fastapi import Request
+from config import API_KEY
 
 app = FastAPI()
+
+# Configurar segurança para API Key
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Criar as tabelas no banco ao iniciar
 init_db()
@@ -32,8 +33,17 @@ def get_db():
     finally:
         db.close()
 
+def validar_api_key(api_key: str = Depends(api_key_header)):
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+    
 @app.post("/encurtar", response_model=URLResponse)
-def encurtar_url(request: URLRequest, req: Request, db: Session = Depends(get_db)):
+def encurtar_url(
+    request: URLRequest,
+    req: Request,
+    db: Session = Depends(get_db),
+    _: str = Depends(validar_api_key)  # Exige API Key
+):
     short_code = shortuuid.ShortUUID().random(length=6)
     new_url = URL(short_code=short_code, original_url=str(request.url))
     db.add(new_url)
@@ -41,13 +51,9 @@ def encurtar_url(request: URLRequest, req: Request, db: Session = Depends(get_db
 
     host = req.headers.get("X-Forwarded-Host", req.base_url.hostname)
     port = req.headers.get("X-Forwarded-Port", req.base_url.port or "8001")
-
     full_url = f"http://{host}:{port}/{short_code}"
 
-    # Obter ID do container (nome do host dentro do Docker)
-    container_id = os.popen("hostname").read().strip()
-
-    return {"short_url": full_url, "processed_by": container_id}
+    return {"short_url": full_url}
 
 @app.get("/{short_code}")
 def redirecionar_url(short_code: str, db: Session = Depends(get_db)):
