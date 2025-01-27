@@ -11,6 +11,8 @@ import os
 from fastapi import Request
 from config import API_KEY
 
+from task_queue import publish_message
+
 app = FastAPI()
 
 RATE_LIMIT = 5  # Número máximo de requisições permitidas
@@ -79,22 +81,27 @@ def encurtar_url(
 
 
 @app.get("/{short_code}")
-def redirecionar_url(short_code: str, db: Session = Depends(get_db)):
-    # Primeiro, verificar se a URL já está em cache no Redis
+def redirecionar_url(short_code: str, db: Session = Depends(get_db), req: Request = None):
     url_original = redis_client.get(short_code)
-    
+
     if url_original:
         print(f"Cache HIT: {short_code} -> {url_original}")
-        return RedirectResponse(url=url_original)
+    else:
+        url_entry = db.query(URL).filter(URL.short_code == short_code).first()
+        if url_entry:
+            redis_client.set(short_code, url_entry.original_url)
+            url_original = url_entry.original_url
+        else:
+            raise HTTPException(status_code=404, detail="URL encurtada não encontrada")
 
-    # Se não estiver no cache, buscar no banco de dados
-    url_entry = db.query(URL).filter(URL.short_code == short_code).first()
+    # Criar um log de acesso e enviá-lo para o RabbitMQ
+    log_message = {
+        "short_code": short_code,
+        "original_url": url_original,
+        "ip": req.client.host,
+        "user_agent": req.headers.get("User-Agent", "Unknown"),
+    }
 
-    if url_entry:
-        # Armazena a URL encurtada no Redis para acessos futuros
-        redis_client.set(short_code, url_entry.original_url)
-        print(f"Cache MISS: {short_code} armazenado no Redis")
-        return RedirectResponse(url=url_entry.original_url)
+    publish_message("access_logs", log_message)  # Enviar para fila 'access_logs'
 
-    # Se não encontrar, retorna erro 404
-    raise HTTPException(status_code=404, detail="URL encurtada não encontrada")
+    return RedirectResponse(url=url_original)
