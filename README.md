@@ -11,6 +11,7 @@ Este projeto é um **Encurtador de URLs** desenvolvido com **FastAPI** no backen
 - **🔗 SQLAlchemy** - ORM para interação com o banco de dados.
 - **⚡ Uvicorn** - Servidor ASGI para rodar a API.
 - **🆖 NGINX** - balanceador de carga com NGINX para distribuir requisições entre múltiplos containers da API.
+- **🐍 Autenticação e Rate-Limiting** - Proteger a API contra abusos e limitar a quantidade de requisições por usuário.
 
 ## 📂 Estrutura do Projeto
 ```
@@ -92,7 +93,6 @@ curl -v http://127.0.0.1:8001/XyZ123
 ✅ Relatórios de estatísticas de acesso.  
 ✅ RabbitMQ ou Kafka para processar logs de acesso sem sobrecarregar a API
 ✅ Monitoramento e logs
-✅ Rate-Limiting Proteger a API contra abusos e limitar a quantidade de requisições por usuário
 ---
 
 ### 💡 **Contribuição**
