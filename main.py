@@ -13,6 +13,10 @@ from config import API_KEY
 
 app = FastAPI()
 
+RATE_LIMIT = 5  # Número máximo de requisições permitidas
+RATE_WINDOW = 60  # Tempo (em segundos) para resetar o limite
+
+
 # Configurar segurança para API Key
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -37,13 +41,31 @@ def validar_api_key(api_key: str = Depends(api_key_header)):
     if api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
     
+def check_rate_limit(request: Request):
+        client_ip = request.client.host  # Identificar o usuário pelo IP
+        key = f"rate_limit:{client_ip}"
+
+        # Verificar o número de requisições no Redis
+        requests = redis_client.get(key)
+
+        if requests is None:
+            redis_client.setex(key, RATE_WINDOW, 1)  # Criar chave com expiração
+        
+        else:
+            requests = int(requests)
+        if requests >= RATE_LIMIT:
+            raise HTTPException(status_code=429, detail="Muitas requisições. Tente novamente mais tarde.")
+        redis_client.incr(key)  # Incrementa contador
+
 @app.post("/encurtar", response_model=URLResponse)
 def encurtar_url(
     request: URLRequest,
     req: Request,
     db: Session = Depends(get_db),
-    _: str = Depends(validar_api_key)  # Exige API Key
+    _: str = Depends(validar_api_key),  # Exige API Key
 ):
+    check_rate_limit(req)  # Aplica Rate-Limiting
+
     short_code = shortuuid.ShortUUID().random(length=6)
     new_url = URL(short_code=short_code, original_url=str(request.url))
     db.add(new_url)
@@ -54,6 +76,7 @@ def encurtar_url(
     full_url = f"http://{host}:{port}/{short_code}"
 
     return {"short_url": full_url}
+
 
 @app.get("/{short_code}")
 def redirecionar_url(short_code: str, db: Session = Depends(get_db)):
