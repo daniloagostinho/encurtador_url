@@ -39,9 +39,15 @@ def encurtar_url(request: URLRequest, req: Request, db: Session = Depends(get_db
     db.add(new_url)
     db.commit()
 
-    # Construir a URL encurtada dinamicamente
-    host = req.base_url.hostname  # Obtém o host dinamicamente
-    port = req.base_url.port      # Obtém a porta dinamicamente
+    # Detectar corretamente o host e a porta
+    host = req.headers.get("X-Forwarded-Host", req.base_url.hostname)
+    forwarded_port = req.headers.get("X-Forwarded-Port")
+
+    # Usar a porta real exposta pelo NGINX (8001) se for acessado externamente
+    port = forwarded_port if forwarded_port else req.base_url.port
+    if not port or port in ["None", "80"]:
+        port = 8001  # Porta externa usada no Docker
+
     full_url = f"http://{host}:{port}/{short_code}"
 
     return {"short_url": full_url}

@@ -10,6 +10,7 @@ Este projeto é um **Encurtador de URLs** desenvolvido com **FastAPI** no backen
 - **🐳 Docker & Docker Compose** - Containerização e orquestração do ambiente.
 - **🔗 SQLAlchemy** - ORM para interação com o banco de dados.
 - **⚡ Uvicorn** - Servidor ASGI para rodar a API.
+- **🆖 NGINX** - balanceador de carga com NGINX para distribuir requisições entre múltiplos containers da API.
 
 ## 📂 Estrutura do Projeto
 ```
@@ -89,9 +90,9 @@ curl -v http://127.0.0.1:8001/XyZ123
 ✅ Adicionar métricas e monitoramento com Prometheus + Grafana.  
 ✅ Expiração de URLs encurtadas.  
 ✅ Relatórios de estatísticas de acesso.  
-✅ Usar **NGINX ou Traefik** para distribuir requisições entre múltiplos containers.
 ✅ RabbitMQ ou Kafka para processar logs de acesso sem sobrecarregar a API
 ✅ Monitoramento e logs
+✅ Rate-Limiting Proteger a API contra abusos e limitar a quantidade de requisições por usuário
 ---
 
 ### 💡 **Contribuição**
