@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 import shortuuid
 from fastapi.responses import RedirectResponse
@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, init_db, URL
 
 from cache import redis_client
+
+import os
+from fastapi import Request
 
 app = FastAPI()
 
@@ -31,26 +34,20 @@ def get_db():
 
 @app.post("/encurtar", response_model=URLResponse)
 def encurtar_url(request: URLRequest, req: Request, db: Session = Depends(get_db)):
-    # Gerar um código único curto
     short_code = shortuuid.ShortUUID().random(length=6)
-
-    # Salvar no banco de dados
     new_url = URL(short_code=short_code, original_url=str(request.url))
     db.add(new_url)
     db.commit()
 
-    # Detectar corretamente o host e a porta
     host = req.headers.get("X-Forwarded-Host", req.base_url.hostname)
-    forwarded_port = req.headers.get("X-Forwarded-Port")
-
-    # Usar a porta real exposta pelo NGINX (8001) se for acessado externamente
-    port = forwarded_port if forwarded_port else req.base_url.port
-    if not port or port in ["None", "80"]:
-        port = 8001  # Porta externa usada no Docker
+    port = req.headers.get("X-Forwarded-Port", req.base_url.port or "8001")
 
     full_url = f"http://{host}:{port}/{short_code}"
 
-    return {"short_url": full_url}
+    # Obter ID do container (nome do host dentro do Docker)
+    container_id = os.popen("hostname").read().strip()
+
+    return {"short_url": full_url, "processed_by": container_id}
 
 @app.get("/{short_code}")
 def redirecionar_url(short_code: str, db: Session = Depends(get_db)):
