@@ -55,7 +55,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://encurtador_user:password@db:5432/encurtador
       - REDIS_HOST=redis
-      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_HOST=encurtador_queue
       - RABBITMQ_USER=user
       - RABBITMQ_PASS=password
     expose:

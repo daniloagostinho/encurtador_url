@@ -3,7 +3,7 @@ import pika
 import json
 
 # Pegando as credenciais corretas das variáveis de ambiente
-RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "encurtador_queue")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "user")  # Certifique-se de que esse usuário existe
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "password")  # Senha correta
 
