@@ -44,20 +44,22 @@ def validar_api_key(api_key: str = Depends(api_key_header)):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
     
 def check_rate_limit(request: Request):
-        client_ip = request.client.host  # Identificar o usuário pelo IP
-        key = f"rate_limit:{client_ip}"
+    client_ip = request.client.host  # Identificar o usuário pelo IP
+    key = f"rate_limit:{client_ip}"
 
-        # Verificar o número de requisições no Redis
-        requests = redis_client.get(key)
+    # Verificar o número de requisições no Redis
+    requests = redis_client.get(key)
 
-        if requests is None:
-            redis_client.setex(key, RATE_WINDOW, 1)  # Criar chave com expiração
-        
-        else:
-            requests = int(requests)
-        if requests >= RATE_LIMIT:
-            raise HTTPException(status_code=429, detail="Muitas requisições. Tente novamente mais tarde.")
-        redis_client.incr(key)  # Incrementa contador
+    if requests is None:
+        redis_client.setex(key, RATE_WINDOW, 1)  # Criar chave com expiração
+        requests = 1  # Definir requests como 1 para evitar erro
+    else:
+        requests = int(requests)
+
+    if requests >= RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Muitas requisições. Tente novamente mais tarde.")
+
+    redis_client.incr(key)  # Incrementa contador
 
 @app.post("/encurtar", response_model=URLResponse)
 def encurtar_url(

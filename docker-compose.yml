@@ -9,14 +9,21 @@ services:
       POSTGRES_DB: encurtador
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "encurtador_user"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
 
   api:
     container_name: encurtador_api
     image: encurtador_url-app
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # Espera até o banco estar pronto
     environment:
       DATABASE_URL: "postgresql://encurtador_user:password@db:5432/encurtador"
+      REDIS_HOST: "redis"
     ports:
       - "8001:8000"
 
